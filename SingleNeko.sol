@@ -155,9 +155,14 @@ contract SingleNeko is IERC721, ERC165 {
         //give rewards to upline
         uint totalItem = users[referrerAddress].itemCount;
         if(totalItem % 4 == 0){
-            //Last slot goes to super upline - TO FIX: suspect owner give to 00000, as itemcount for owner is 0
-            giveETH(users[referrerAddress].referrer,uplineCommision);
-            emit SentExtraEthDividends(user, users[referrerAddress].referrer);
+            //Last slot goes to super upline
+            if(referrerAddress != owner){
+              giveETH(users[referrerAddress].referrer,uplineCommision);
+              emit SentExtraEthDividends(user, users[referrerAddress].referrer);
+            }else{
+              giveETH(owner,uplineCommision);
+              emit SentExtraEthDividends(owner, users[referrerAddress].referrer);
+            }
         }else{
             //goes to upline
             giveETH(referrerAddress,uplineCommision);
