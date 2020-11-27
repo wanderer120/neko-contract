@@ -100,7 +100,7 @@ contract SingleNeko is IERC721, ERC165 {
     function getAllItemsByUser(address user)public view returns (uint[] memory){
         uint[] memory result = new uint256[](users[user].itemCount);
         for(uint i=0;i<users[user].itemCount;i++){
-            result[i] = users[user].items[i];
+            result[i] = users[user].items[i].id;
         }
         return result;
     }
@@ -169,7 +169,7 @@ contract SingleNeko is IERC721, ERC165 {
               emit SentExtraEthDividends(user, users[referrerAddress].referrer);
             }else{
               giveETH(owner,uplineCommision);
-              emit SentExtraEthDividends(user, owner.referrer);
+              emit SentExtraEthDividends(user, owner);
             }
 
 
