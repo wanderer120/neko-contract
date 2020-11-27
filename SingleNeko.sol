@@ -100,7 +100,7 @@ contract SingleNeko is IERC721, ERC165 {
     function getAllItemsByUser(address user)public view returns (uint[] memory){
         uint[] memory result = new uint256[](users[user].itemCount);
         for(uint i=0;i<users[user].itemCount;i++){
-            result[i] = users[user].items[i].id;
+            result[i] = users[user].items[i];
         }
         return result;
     }
