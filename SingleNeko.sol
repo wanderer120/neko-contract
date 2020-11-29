@@ -6,6 +6,7 @@
 //v1.2 - 0xb2F7e75926cacfD83Ee7B5c4cb04F573Ee58eC76
 //v1.3 - 0x3899c379c4deef307ceb1c3f3265be3c9a6ff5cf
 //v1.31 - 0x095c9236725235a4CD94C609fc259D886001188E
+//v1.32 - 0x25681E3817EEfb9bBFdBC4398A30AfFfA407aA52
 //0x73e612F58362f44Bb0Af24fA074B147b30389252   - owner at testnet
 //["0x3EbD46521802ab19A2411De9fe34C9cb7E6B3FA7","0xa010d14032A7e24f9374182E5663E743Dc66321F"]
 pragma solidity >=0.4.23 <0.6.0;
@@ -104,14 +105,16 @@ contract SingleNeko is IERC721, ERC165 {
         lastItemId++;
         emit BuyItemEvent(userAddress, (lastItemId-1));
     }
-    function getAllItemsByUser(address user)public view returns (uint[] memory, uint[] memory){
+    function getAllItemsByUser(address user)public view returns (uint[] memory, uint[] memory, uint[] memory){
         uint[] memory resultID = new uint256[](users[user].itemCount);
         uint[] memory resultPower = new uint256[](users[user].itemCount);
+        uint[] memory resultLastWin = new uint256[](users[user].itemCount);
         for(uint i=0;i<users[user].itemCount;i++){
             resultID[i] = users[user].items[i].id;
             resultPower[i] = users[user].items[i].power;
+            resultLastWin[i] = users[user].items[i].LastWinAmount;
         }
-        return (resultID, resultPower);
+        return (resultID, resultPower, resultLastWin);
     }
     function registrationExt(address referrerAddress) external payable {
         registration(msg.sender, referrerAddress);
