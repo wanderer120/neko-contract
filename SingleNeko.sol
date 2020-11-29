@@ -24,6 +24,7 @@ contract SingleNeko is IERC721, ERC165 {
     struct Item{
         uint id;
         uint power;
+        uint LastWinAmount;
     }
 
     event Registration(address indexed user, address indexed referrer, uint indexed userId, uint referrerId);
@@ -87,7 +88,8 @@ contract SingleNeko is IERC721, ERC165 {
         uint256 itemPower = generateRandomNum(userAddress,10,8);
         Item memory item = Item({
             id:lastItemId,
-            power:itemPower
+            power:itemPower,
+            LastWinAmount:0
         });
 
         users[userAddress].items[users[userAddress].itemCount] = item;
@@ -139,7 +141,8 @@ contract SingleNeko is IERC721, ERC165 {
         uint256 itemPower = generateRandomNum(userAddress,10,8);
         Item memory item = Item({
             id:lastItemId,
-            power:itemPower
+            power:itemPower,
+            LastWinAmount:0
         });
 
         users[userAddress].items[users[userAddress].itemCount] = item;
@@ -201,7 +204,9 @@ contract SingleNeko is IERC721, ERC165 {
                 totalPower += allItems[i].power;
             }
             for(uint i=0;i<totalReward;i++){
-                giveETH(ownerOf(allItems[i].id),(itemRewardPrice*allItems[i].power/totalPower));
+                uint reward = itemRewardPrice*allItems[i].power/totalPower;
+                giveETH(ownerOf(allItems[i].id),reward);
+                allItems[i].LastWinAmount = reward;
                 emit SentExtraEthDividends(user, ownerOf(allItems[i].id));
             }
         }
