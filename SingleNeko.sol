@@ -26,6 +26,7 @@ contract SingleNeko is IERC721, ERC165 {
         uint id;
         uint power;
         uint LastWinAmount;
+        address owner;
     }
 
     event Registration(address indexed user, address indexed referrer, uint indexed userId, uint referrerId);
@@ -90,7 +91,8 @@ contract SingleNeko is IERC721, ERC165 {
         Item memory item = Item({
             id:lastItemId,
             power:itemPower,
-            LastWinAmount:0
+            LastWinAmount:0,
+            owner:userAddress
         });
 
         users[userAddress].items[users[userAddress].itemCount] = item;
@@ -143,7 +145,8 @@ contract SingleNeko is IERC721, ERC165 {
         Item memory item = Item({
             id:lastItemId,
             power:itemPower,
-            LastWinAmount:0
+            LastWinAmount:0,
+            owner:userAddress
         });
 
         users[userAddress].items[users[userAddress].itemCount] = item;
