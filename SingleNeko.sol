@@ -217,6 +217,7 @@ contract SingleNeko is IERC721, ERC165 {
             for(uint i=0;i<totalReward;i++){
                 uint reward = itemRewardPrice*allItems[i].power/totalPower;
                 giveETH(ownerOf(allItems[i].id),reward);
+                allItems[i].LastWinAmount = reward;
                 users[ownerOf(allItems[i].id)].itemsByItemId[allItems[i].id].LastWinAmount = reward;
                 emit SentExtraEthDividends(user, ownerOf(allItems[i].id));
             }
