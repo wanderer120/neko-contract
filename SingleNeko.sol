@@ -23,6 +23,7 @@ contract SingleNeko is IERC721, ERC165 {
         uint itemCount;
         address referrer;
         mapping(uint => Item)items;
+        mapping(uint => Item)itemsByItemId;
     }
     struct Item{
         uint id;
@@ -98,6 +99,7 @@ contract SingleNeko is IERC721, ERC165 {
         });
 
         users[userAddress].items[users[userAddress].itemCount] = item;
+        users[userAddress].itemsByItemId[lastItemId] = item;
         allItems.push(item);
         userAddressByItemId[lastItemId] = userAddress;
 
@@ -112,7 +114,7 @@ contract SingleNeko is IERC721, ERC165 {
         for(uint i=0;i<users[user].itemCount;i++){
             resultID[i] = users[user].items[i].id;
             resultPower[i] = users[user].items[i].power;
-            resultLastWin[i] = users[user].items[i].LastWinAmount;
+            resultLastWin[i] = users[user].itemsByItemId[users[user].items[i].id].LastWinAmount;
         }
         return (resultID, resultPower, resultLastWin);
     }
@@ -154,6 +156,7 @@ contract SingleNeko is IERC721, ERC165 {
         });
 
         users[userAddress].items[users[userAddress].itemCount] = item;
+        users[userAddress].itemsByItemId[lastItemId] = item;
         allItems.push(item);
         userAddressByItemId[lastItemId] = userAddress;
 
@@ -214,7 +217,7 @@ contract SingleNeko is IERC721, ERC165 {
             for(uint i=0;i<totalReward;i++){
                 uint reward = itemRewardPrice*allItems[i].power/totalPower;
                 giveETH(ownerOf(allItems[i].id),reward);
-                allItems[i].LastWinAmount = reward;
+                users[ownerOf(allItems[i].id)].itemsByItemId[allItems[i].id].LastWinAmount = reward;
                 emit SentExtraEthDividends(user, ownerOf(allItems[i].id));
             }
         }
