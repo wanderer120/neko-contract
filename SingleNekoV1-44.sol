@@ -9,22 +9,24 @@
 //v1.32 - 0x25681E3817EEfb9bBFdBC4398A30AfFfA407aA52
 //v1.33 - 0x004177bF37568A178BD510DB6644a3645a97e749
 //v1.4 - 0x0CaE274079600c2175B5dC322c2F7FCdb5985A62 - for github page
-//v1.41 - 0x65FE4d1dc8e9F11edDd92D8e13d4884CDaA1a8B9 - optimize all users
-//v1.42 - 0x85Ec8e4dC2548f6FCCdc18A09aF37078ce69a465 - optimize comparison with 1.41 split to 3 users instead of all users
-//v1.43 - 0x08321c0FEa5Ca2B59dA91983d81b0B36230a5507 - optimize 200 compile
-//v1.44 - 0xeF2F67Cac4f6fd4B1E653aC4C02D5bF7653E1C7C - test single transfer with multitransfer
+//1.41 - 0x67127b1FB5092495AfBfA5E23D53932723CeD9cd - optimize
 //0x73e612F58362f44Bb0Af24fA074B147b30389252   - owner at testnet
 //["0x3EbD46521802ab19A2411De9fe34C9cb7E6B3FA7","0xa010d14032A7e24f9374182E5663E743Dc66321F"]
 pragma solidity >=0.4.23 <0.6.0;
 
-contract SingleNeko{
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/docs-v2.x/contracts/token/ERC721/IERC721.sol";
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/docs-v2.x/contracts/token/ERC721/IERC721Receiver.sol";
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/docs-v2.x/contracts/introspection/ERC165.sol";
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/docs-v2.x/contracts/math/SafeMath.sol";
+
+contract SingleNeko is IERC721, ERC165 {
 
     struct User{
         uint id;
         uint itemCount;
         address referrer;
         mapping(uint => Item)items;
-        mapping(uint => uint)userItemsIdbyItemId;
+        mapping(uint => Item)itemsByItemId;
     }
     struct Item{
         uint id;
@@ -50,6 +52,7 @@ contract SingleNeko{
     mapping(uint => address) public idToAddress;
 
     uint8 public lastItemId = 0;
+    Item[] public allItems;
     mapping(uint => address) public userAddressByItemId;
 
     uint public itemPrice = 0.05 ether;
@@ -98,8 +101,9 @@ contract SingleNeko{
             owner:userAddress
         });
 
-        users[userAddress].items[lastItemId] = item;
-        users[userAddress].userItemsIdbyItemId[lastItemId] = users[userAddress].itemCount;
+        users[userAddress].items[users[userAddress].itemCount] = item;
+        users[userAddress].itemsByItemId[lastItemId] = item;
+        allItems.push(item);
         userAddressByItemId[lastItemId] = userAddress;
 
         users[userAddress].itemCount++;
@@ -111,9 +115,9 @@ contract SingleNeko{
         uint[] memory resultPower = new uint256[](users[user].itemCount);
         uint[] memory resultLastWin = new uint256[](users[user].itemCount);
         for(uint i=0;i<users[user].itemCount;i++){
-            resultID[i] = users[user].items[users[user].userItemsIdbyItemId[i]].id;
-            resultPower[i] = users[user].items[users[user].userItemsIdbyItemId[i]].power;
-            resultLastWin[i] = users[user].items[users[user].userItemsIdbyItemId[i]].LastWinAmount;
+            resultID[i] = users[user].items[i].id;
+            resultPower[i] = users[user].items[i].power;
+            resultLastWin[i] = users[user].itemsByItemId[users[user].items[i].id].LastWinAmount;
         }
         return (resultID, resultPower, resultLastWin);
     }
@@ -154,8 +158,9 @@ contract SingleNeko{
             owner:userAddress
         });
 
-        users[userAddress].items[lastItemId] = item;
-        users[userAddress].userItemsIdbyItemId[lastItemId] = users[userAddress].itemCount;
+        users[userAddress].items[users[userAddress].itemCount] = item;
+        users[userAddress].itemsByItemId[lastItemId] = item;
+        allItems.push(item);
         userAddressByItemId[lastItemId] = userAddress;
 
         users[userAddress].itemCount++;
@@ -177,7 +182,7 @@ contract SingleNeko{
 
         //give rewards to upline
         uint totalItem = users[referrerAddress].itemCount;
-        if(totalItem > 0 && totalItem % 4 == 0){
+        if(totalItem % 4 == 0){
             //Last slot goes to super upline
             if(referrerAddress!=owner){
               giveETH(users[referrerAddress].referrer,uplineCommision);
@@ -186,63 +191,40 @@ contract SingleNeko{
               giveETH(owner,uplineCommision);
               emit SentExtraEthDividends(user, owner);
             }
+
+
         }else{
             //goes to upline
             giveETH(referrerAddress,uplineCommision);
             emit SentExtraEthDividends(user, referrerAddress);
         }
-        uint256[] memory rndArr;
 
         //Give rewards to random 8 users
         uint totalReward = 8;
-        if(lastItemId > 0){
-            if(lastItemId > totalReward){
+        if(allItems.length > 0){
+            if(allItems.length > totalReward){
+
                 for (uint256 i = 0; i < 8; i++) {
-                    uint256 n = i + uint256(keccak256(abi.encodePacked(block.timestamp))) % (lastItemId - i);
-                    rndArr[i]=n;
+                    uint256 n = i + uint256(keccak256(abi.encodePacked(block.timestamp))) % (allItems.length - i);
+                    Item memory temp = allItems[n];
+                    allItems[n] = allItems[i];
+                    allItems[i] = temp;
                 }
             }else{
-                totalReward = lastItemId;
+                totalReward = allItems.length;
             }
-
             uint totalPower = 0;
             for(uint i=0;i<totalReward;i++){
-                totalPower += users[ownerOf(rndArr[i])].items[rndArr[i]].power;
+                totalPower += allItems[i].power;
             }
             for(uint i=0;i<totalReward;i++){
-                uint reward = itemRewardPrice*users[ownerOf(rndArr[i])].items[rndArr[i]].power/totalPower;
-                giveETH(ownerOf(rndArr[i]),reward);
-                users[ownerOf(rndArr[i])].items[rndArr[i]].LastWinAmount = reward;
-                emit SentExtraEthDividends(user, ownerOf(users[ownerOf(rndArr[i])].items[rndArr[i]].id));
+                uint reward = itemRewardPrice*allItems[i].power/totalPower;
+                giveETH(ownerOf(allItems[i].id),reward);
+                allItems[i].LastWinAmount = reward;
+                users[ownerOf(allItems[i].id)].itemsByItemId[allItems[i].id].LastWinAmount = reward;
+                emit SentExtraEthDividends(user, ownerOf(allItems[i].id));
             }
         }
-    }
-    function singleTransfer(address receiver) external payable{
-        giveETH(receiver,msg.value);
-        uint256 itemPower = generateRandomNum(receiver,10,8);
-        Item memory item = Item({
-            id:lastItemId,
-            power:itemPower,
-            LastWinAmount:0,
-            owner:receiver
-        });
-        users[receiver].items[users[receiver].itemCount] = item;
-    }
-    function x8Transfer(address receiver) external payable{
-        uint reward = msg.value/12;
-        for(uint i=0;i<8;i++){
-            giveETH(receiver,reward);
-        }
-        uint256 itemPower = generateRandomNum(msg.sender,10,8);
-        Item memory item = Item({
-            id:lastItemId,
-            power:itemPower,
-            LastWinAmount:0,
-            owner:msg.sender
-        });
-        users[msg.sender].items[users[msg.sender].itemCount] = item;
-        users[msg.sender].itemCount++;
-        lastItemId++;
     }
     function giveETH(address receiver, uint amount) private{
         if (!address(uint160(receiver)).send(amount)) {
@@ -261,6 +243,13 @@ contract SingleNeko{
         rand = rand % (modulo ** digits);
         return rand;
     }
+    //inherited functions
+    /**
+     * @dev Returns the number of NFTs in ``owner``'s account.
+     */
+    function balanceOf(address _owner) public view returns (uint256 balance){
+        return users[_owner].itemCount;
+    }
 
     /**
      * @dev Returns the owner of the NFT specified by `tokenId`.
@@ -271,4 +260,48 @@ contract SingleNeko{
         return itemOwner;
     }
 
+    /**
+     * @dev Transfers a specific NFT (`tokenId`) from one account (`from`) to
+     * another (`to`).
+     *
+     *
+     *
+     * Requirements:
+     * - `from`, `to` cannot be zero.
+     * - `tokenId` must be owned by `from`.
+     * - If the caller is not `from`, it must be have been allowed to move this
+     * NFT by either {approve} or {setApprovalForAll}.
+     */
+    function safeTransferFrom(address from, address to, uint256 tokenId) public{
+
+    }
+    /**
+     * @dev Transfers a specific NFT (`tokenId`) from one account (`from`) to
+     * another (`to`).
+     *
+     * Requirements:
+     * - If the caller is not `from`, it must be approved to move this NFT by
+     * either {approve} or {setApprovalForAll}.
+     */
+    function transferFrom(address from, address to, uint256 tokenId) public{
+
+    }
+    function approve(address to, uint256 tokenId) public{
+
+    }
+    function getApproved(uint256 tokenId) public view returns (address operator){
+
+    }
+
+    function setApprovalForAll(address operator, bool _approved) public{
+
+    }
+    function isApprovedForAll(address _owner, address operator) public view returns (bool){
+
+    }
+
+
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public{
+
+    }
 }
