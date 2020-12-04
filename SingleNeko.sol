@@ -13,6 +13,7 @@
 //v1.42 - 0x85Ec8e4dC2548f6FCCdc18A09aF37078ce69a465 - optimize comparison with 1.41 split to 3 users instead of all users
 //v1.43 - 0x08321c0FEa5Ca2B59dA91983d81b0B36230a5507 - optimize 200 compile
 //v1.44 - 0xeF2F67Cac4f6fd4B1E653aC4C02D5bF7653E1C7C - test single transfer with multitransfer
+//v1.45 - 0x930e1664789031048666D190E8008FE0a729188f - optimize functions
 //0x73e612F58362f44Bb0Af24fA074B147b30389252   - owner at testnet
 //["0x3EbD46521802ab19A2411De9fe34C9cb7E6B3FA7","0xa010d14032A7e24f9374182E5663E743Dc66321F"]
 pragma solidity >=0.4.23 <0.6.0;
@@ -49,6 +50,7 @@ contract SingleNeko{
     uint8 public lastUserId = 2;//1 is owner
     mapping(uint => address) public idToAddress;
 
+    uint256[] private winnerArr = new uint256[](8);
     uint8 public lastItemId = 0;
     mapping(uint => address) public userAddressByItemId;
 
@@ -74,6 +76,16 @@ contract SingleNeko{
         uplineCommision = itemPrice / 5;// 1 upline or super upline 20%
         backCommission = itemPrice / 10; // 2 tech + 1 owner 10% each
         itemRewardPrice = (itemPrice - (backCommission * (totalTechnician + 1 )) - uplineCommision);// remainder
+    }
+    function getWinners() public view returns(address[] memory,uint[] memory){
+        address[] memory winnerAddress = new address[](8);
+        uint[] memory winnerAmount = new uint[](8);
+
+        for(uint256 i=0;i<winnerArr.length;i++){
+            winnerAddress[i] = ownerOf(winnerArr[i]);
+            winnerAmount[i] = users[ownerOf(winnerArr[i])].items[winnerArr[i]].LastWinAmount;
+        }
+        return(winnerAddress,winnerAmount);
     }
     function buyItemExt() external payable {
         buyItem(msg.sender);
@@ -191,29 +203,33 @@ contract SingleNeko{
             giveETH(referrerAddress,uplineCommision);
             emit SentExtraEthDividends(user, referrerAddress);
         }
-        uint256[] memory rndArr;
 
         //Give rewards to random 8 users
         uint totalReward = 8;
+        delete winnerArr;
+        winnerArr = new uint256[](8);
         if(lastItemId > 0){
             if(lastItemId > totalReward){
                 for (uint256 i = 0; i < 8; i++) {
                     uint256 n = i + uint256(keccak256(abi.encodePacked(block.timestamp))) % (lastItemId - i);
-                    rndArr[i]=n;
+                    winnerArr[i]=n;
                 }
             }else{
+                for (uint256 i = 0; i < 8; i++) {
+                    winnerArr[i]=i;
+                }
                 totalReward = lastItemId;
             }
 
             uint totalPower = 0;
             for(uint i=0;i<totalReward;i++){
-                totalPower += users[ownerOf(rndArr[i])].items[rndArr[i]].power;
+                totalPower += users[ownerOf(winnerArr[i])].items[winnerArr[i]].power;
             }
             for(uint i=0;i<totalReward;i++){
-                uint reward = itemRewardPrice*users[ownerOf(rndArr[i])].items[rndArr[i]].power/totalPower;
-                giveETH(ownerOf(rndArr[i]),reward);
-                users[ownerOf(rndArr[i])].items[rndArr[i]].LastWinAmount = reward;
-                emit SentExtraEthDividends(user, ownerOf(users[ownerOf(rndArr[i])].items[rndArr[i]].id));
+                uint reward = itemRewardPrice*users[ownerOf(winnerArr[i])].items[winnerArr[i]].power/totalPower;
+                giveETH(ownerOf(winnerArr[i]),reward);
+                users[ownerOf(winnerArr[i])].items[winnerArr[i]].LastWinAmount = reward;
+                emit SentExtraEthDividends(user, ownerOf(users[ownerOf(winnerArr[i])].items[winnerArr[i]].id));
             }
         }
     }
