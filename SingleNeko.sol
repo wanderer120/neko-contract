@@ -13,7 +13,7 @@
 //v1.42 - 0x85Ec8e4dC2548f6FCCdc18A09aF37078ce69a465 - optimize comparison with 1.41 split to 3 users instead of all users
 //v1.43 - 0x08321c0FEa5Ca2B59dA91983d81b0B36230a5507 - optimize 200 compile
 //v1.44 - 0xeF2F67Cac4f6fd4B1E653aC4C02D5bF7653E1C7C - test single transfer with multitransfer
-//v1.45 - 0x930e1664789031048666D190E8008FE0a729188f - optimize functions
+//v1.45 - 0x6BF66790396CB4A5eec5211FEaBeE48f3A91e38A - optimize functions
 //0x73e612F58362f44Bb0Af24fA074B147b30389252   - owner at testnet
 //["0x3EbD46521802ab19A2411De9fe34C9cb7E6B3FA7","0xa010d14032A7e24f9374182E5663E743Dc66321F"]
 pragma solidity >=0.4.23 <0.6.0;
@@ -25,7 +25,7 @@ contract SingleNeko{
         uint itemCount;
         address referrer;
         mapping(uint => Item)items;
-        mapping(uint => uint)userItemsIdbyItemId;
+        mapping(uint => uint)temsIdbyUserItemId;
     }
     struct Item{
         uint id;
@@ -111,7 +111,7 @@ contract SingleNeko{
         });
 
         users[userAddress].items[lastItemId] = item;
-        users[userAddress].userItemsIdbyItemId[lastItemId] = users[userAddress].itemCount;
+        users[userAddress].temsIdbyUserItemId[users[userAddress].itemCount] = lastItemId;
         userAddressByItemId[lastItemId] = userAddress;
 
         users[userAddress].itemCount++;
@@ -123,9 +123,9 @@ contract SingleNeko{
         uint[] memory resultPower = new uint256[](users[user].itemCount);
         uint[] memory resultLastWin = new uint256[](users[user].itemCount);
         for(uint i=0;i<users[user].itemCount;i++){
-            resultID[i] = users[user].items[users[user].userItemsIdbyItemId[i]].id;
-            resultPower[i] = users[user].items[users[user].userItemsIdbyItemId[i]].power;
-            resultLastWin[i] = users[user].items[users[user].userItemsIdbyItemId[i]].LastWinAmount;
+            resultID[i] = users[user].items[users[user].temsIdbyUserItemId[i]].id;
+            resultPower[i] = users[user].items[users[user].temsIdbyUserItemId[i]].power;
+            resultLastWin[i] = users[user].items[users[user].temsIdbyUserItemId[i]].LastWinAmount;
         }
         return (resultID, resultPower, resultLastWin);
     }
@@ -167,7 +167,7 @@ contract SingleNeko{
         });
 
         users[userAddress].items[lastItemId] = item;
-        users[userAddress].userItemsIdbyItemId[lastItemId] = users[userAddress].itemCount;
+        users[userAddress].temsIdbyUserItemId[users[userAddress].itemCount] = lastItemId;
         userAddressByItemId[lastItemId] = userAddress;
 
         users[userAddress].itemCount++;
